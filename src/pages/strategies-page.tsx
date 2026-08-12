@@ -3,17 +3,14 @@ import { Bookmark, RotateCcw } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { OpenDayVisualDeck } from '@/components/strategies/open-day-visual-deck'
 import { StrategyNavigatorHeader } from '@/components/strategies/strategy-navigator-header'
-import { StrategySearch } from '@/components/strategies/strategy-search'
 import { useAuth } from '@/context/auth-context'
 import { useFeatureConfig } from '@/context/feature-config-context'
 import { useStrategies } from '@/context/strategy-context'
-import { useWorkEnergy } from '@/context/work-energy-context'
 import {
   filterStrategiesBySituation,
   getSituationChipLabel,
   SITUATION_CHIPS,
 } from '@/data/strategy-navigator-chips'
-import { getStrategiesForSearchTerm } from '@/lib/strategy-search'
 import type { Strategy } from '@/types/strategy'
 
 const VISIBLE_SITUATIONS = SITUATION_CHIPS.slice(0, 7)
@@ -21,7 +18,6 @@ const VISIBLE_SITUATIONS = SITUATION_CHIPS.slice(0, 7)
 export function StrategiesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
-  const { todayCheckIn } = useWorkEnergy()
   const { config: featureConfig } = useFeatureConfig()
   const {
     strategies,
@@ -74,23 +70,6 @@ export function StrategiesPage() {
     [setSearchParams, strategies],
   )
 
-  const handleSearchSelect = useCallback(
-    (strategy: Strategy, context: { searchTerm: string }) => {
-      const results = getStrategiesForSearchTerm(strategies, context.searchTerm)
-      const deck = results.length > 0 ? results : [strategy]
-      const selectedIndex = deck.findIndex((item) => item.id === strategy.id)
-
-      setSearchParams({}, { replace: true })
-      setFilteredStrategies(
-        selectedIndex > 0
-          ? [deck[selectedIndex], ...deck.filter((_, index) => index !== selectedIndex)]
-          : deck,
-      )
-      setFilterLabel(context.searchTerm.trim() || 'Search results')
-    },
-    [setSearchParams, strategies],
-  )
-
   const showSaved = useCallback(() => {
     setSearchParams({}, { replace: true })
     setFilteredStrategies(savedStrategies)
@@ -132,19 +111,6 @@ export function StrategiesPage() {
         <p className="rounded-xl bg-orange/10 px-4 py-3 text-sm text-orange" role="alert">
           {error}
         </p>
-      ) : null}
-
-      {featureConfig.strategies.sections.search !== false ? (
-        <section className="rounded-[1.5rem] border border-border bg-surface-solid p-4 shadow-sm sm:p-6">
-          <p className="mb-3 text-sm font-semibold text-text">Search by situation</p>
-          <StrategySearch
-            variant="landing"
-            strategies={strategies}
-            todayCheckIn={todayCheckIn}
-            onSelectStrategy={handleSearchSelect}
-            onBackToNavigator={showAll}
-          />
-        </section>
       ) : null}
 
       {featureConfig.strategies.sections.situations !== false ? (

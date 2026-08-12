@@ -16,13 +16,24 @@ import {
   markStrategyHelpful,
   recordStrategyFeedback,
   recordStrategyView,
-  subscribeToStrategies,
   subscribeToUserStrategyState,
   toggleSavedStrategy,
 } from '@/lib/strategies'
-import type { Strategy, StrategyCategory, StrategyFeedback, UserStrategyState } from '@/types/strategy'
+import type {
+  Strategy,
+  StrategyCategory,
+  StrategyFeedback,
+  StrategyFeedbackReason,
+  UserStrategyState,
+} from '@/types/strategy'
 import { EMPTY_STRATEGY_STATE } from '@/types/strategy'
 import { useAuth } from '@/context/auth-context'
+import { OPEN_DAY_STRATEGIES } from '@/data/open-day-strategies'
+
+const ILLUSTRATED_STRATEGIES = OPEN_DAY_STRATEGIES.filter(
+  (strategy) =>
+    strategy.category === 'Executive Function' && /^work-\d+(?:-a)?$/.test(strategy.id),
+)
 
 interface StrategyContextValue {
   strategies: Strategy[]
@@ -36,7 +47,11 @@ interface StrategyContextValue {
   toggleSaved: (strategyId: string) => Promise<boolean>
   trackView: (strategyId: string) => Promise<void>
   trackHelpful: (strategyId: string) => Promise<void>
-  trackFeedback: (strategyId: string, feedback: StrategyFeedback) => Promise<void>
+  trackFeedback: (
+    strategyId: string,
+    feedback: StrategyFeedback,
+    reason?: StrategyFeedbackReason,
+  ) => Promise<void>
   clearError: () => void
 }
 
@@ -44,37 +59,11 @@ const StrategyContext = createContext<StrategyContextValue | null>(null)
 
 export function StrategyProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth()
-  const [strategies, setStrategies] = useState<Strategy[]>([])
+  const [strategies] = useState<Strategy[]>(ILLUSTRATED_STRATEGIES)
   const [userState, setUserState] = useState<UserStrategyState>(EMPTY_STRATEGY_STATE)
-  const [catalogLoading, setCatalogLoading] = useState(true)
+  const catalogLoading = false
   const [userLoading, setUserLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (authLoading) return
-
-    if (!user) {
-      setStrategies([])
-      setCatalogLoading(false)
-      return
-    }
-
-    setCatalogLoading(true)
-
-    const unsubscribe = subscribeToStrategies(
-      (data) => {
-        setStrategies(data)
-        setCatalogLoading(false)
-        setError(null)
-      },
-      (subscriptionError) => {
-        setError(getFirestoreStrategyErrorMessage(subscriptionError))
-        setCatalogLoading(false)
-      },
-    )
-
-    return unsubscribe
-  }, [authLoading, user])
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -179,7 +168,11 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
   )
 
   const trackFeedback = useCallback(
-    async (strategyId: string, feedback: StrategyFeedback) => {
+    async (
+      strategyId: string,
+      feedback: StrategyFeedback,
+      reason?: StrategyFeedbackReason,
+    ) => {
       if (!user) {
         throw new Error('You must be signed in to share feedback.')
       }
@@ -187,7 +180,7 @@ export function StrategyProvider({ children }: { children: ReactNode }) {
       setError(null)
 
       try {
-        await recordStrategyFeedback(user.uid, strategyId, feedback)
+        await recordStrategyFeedback(user.uid, strategyId, feedback, reason)
       } catch (feedbackError) {
         const message = getFirestoreStrategyErrorMessage(feedbackError)
         setError(message)

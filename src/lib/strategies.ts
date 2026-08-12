@@ -19,6 +19,7 @@ import { DEFAULT_STRATEGY_SEED } from '@/lib/strategy-seed'
 import type {
   Strategy,
   StrategyFeedback,
+  StrategyFeedbackReason,
   StrategyFilters,
   StrategyUsageRecord,
   UserStrategyState,
@@ -400,6 +401,7 @@ export async function recordStrategyFeedback(
   userId: string,
   strategyId: string,
   feedback: StrategyFeedback,
+  reason?: StrategyFeedbackReason,
 ): Promise<void> {
   const userRef = getUserRef(userId)
   const now = new Date().toISOString()
@@ -419,6 +421,7 @@ export async function recordStrategyFeedback(
       lastMarkedHelpfulAt:
         feedback === 'helped' ? now : (existing?.lastMarkedHelpfulAt ?? null),
       lastFeedback: feedback,
+      lastFeedbackReason: reason ?? null,
       lastFeedbackAt: now,
     }
 
@@ -438,9 +441,11 @@ export async function recordStrategyFeedback(
     )
   })
 
-  if (feedback === 'helped') {
-    void trackAnalyticsEvent(userId, 'submitted_feedback', { strategyId, feedback })
-  }
+  void trackAnalyticsEvent(userId, 'submitted_feedback', {
+    strategyId,
+    feedback,
+    ...(reason ? { reason } : {}),
+  })
 }
 
 export function isStrategySaved(

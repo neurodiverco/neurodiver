@@ -62,12 +62,19 @@ export interface Strategy extends StrategyDocument {
 /** Per-strategy engagement stored on the user document */
 export type StrategyFeedback = 'helped' | 'unsure' | 'not-helpful'
 
+export type StrategyFeedbackReason =
+  | 'too-many-steps'
+  | 'not-my-situation'
+  | 'too-much-energy'
+  | 'not-right-now'
+
 export interface StrategyUsageRecord {
   timesViewed: number
   timesMarkedHelpful: number
   lastViewedAt: string | null
   lastMarkedHelpfulAt: string | null
   lastFeedback?: StrategyFeedback | null
+  lastFeedbackReason?: StrategyFeedbackReason | null
   lastFeedbackAt?: string | null
 }
 
